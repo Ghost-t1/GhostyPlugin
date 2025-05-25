@@ -1,5 +1,0 @@
-name: GhostyPlugin
-version: '0.7'
-main: GhostyPlugin.MainLoader
-api-version: '1.20'
-description: 'А?'
