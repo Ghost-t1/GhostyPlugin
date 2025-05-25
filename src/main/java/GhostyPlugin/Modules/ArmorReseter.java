@@ -1,6 +1,5 @@
 package GhostyPlugin.Modules;
 
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
@@ -11,6 +10,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ArmorMeta;
@@ -22,14 +22,17 @@ import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
+// I Don't want to change code again :((
+
 public class ArmorReseter implements Listener {
 
     private static final Random Random = new Random();
 
-    private static final double ArmorBreakChance = 0.025;
-    private static final double AnvilDamageChance = 0.12;;
-    private static final int MinDurabilityLossPercent = 30;
-    private static final int MaxDurabilityLossPercent = 70;
+    private static final double AnvilDamageChance = 0.12;
+
+    private static final double ArmorBreakChance = 0.5;
+    private static final int MinDurabilityLossPercent = 3;
+    private static final int MaxDurabilityLossPercent = 14;
 
     private final Map<UUID, Block> PlayerAnvilInteractions = new HashMap<>();
 
@@ -48,7 +51,7 @@ public class ArmorReseter implements Listener {
     @EventHandler
     public void OnInventoryClick(InventoryClickEvent Event) {
         if (Event.getInventory().getType() != InventoryType.ANVIL || Event.getRawSlot() != 2 ||
-            Event.getCurrentItem() == null || Event.getCurrentItem().getType() == Material.AIR) {
+                Event.getCurrentItem() == null || Event.getCurrentItem().getType() == Material.AIR) {
             return;
         }
 
@@ -95,11 +98,16 @@ public class ArmorReseter implements Listener {
     public void OnPlayerInteract(PlayerInteractEvent Event) {
         Player Player = Event.getPlayer();
         if (Event.getClickedBlock() != null && (
-                Event.getClickedBlock().getType() == Material.ANVIL || 
-                Event.getClickedBlock().getType() == Material.CHIPPED_ANVIL || 
-                Event.getClickedBlock().getType() == Material.DAMAGED_ANVIL)) {
+                Event.getClickedBlock().getType() == Material.ANVIL ||
+                        Event.getClickedBlock().getType() == Material.CHIPPED_ANVIL ||
+                        Event.getClickedBlock().getType() == Material.DAMAGED_ANVIL)) {
             PlayerAnvilInteractions.put(Player.getUniqueId(), Event.getClickedBlock());
         }
+    }
+
+    @EventHandler
+    public void OnPlayerQuit(PlayerQuitEvent Event) {
+        PlayerAnvilInteractions.remove(Event.getPlayer().getUniqueId());
     }
 
     private boolean HasInventorySpace(Player Player, ItemStack Item) {
@@ -140,8 +148,8 @@ public class ArmorReseter implements Listener {
         }
     }
 
-    private boolean IsValidArmorReset(ItemStack ArmorItem, ItemStack GlassItem) {
-        if (ArmorItem == null || GlassItem == null) {
+    private boolean IsValidArmorReset(ItemStack ArmorItem, ItemStack BlazeItem) {
+        if (ArmorItem == null || BlazeItem == null) {
             return false;
         }
 
@@ -149,7 +157,7 @@ public class ArmorReseter implements Listener {
             return false;
         }
 
-        return ArmorMeta.getTrim() != null && GlassItem.getType() == Material.GLASS_PANE;
+        return ArmorMeta.getTrim() != null && BlazeItem.getType() == Material.BLAZE_POWDER;
     }
 
     private ItemStack CreateResetArmorItem(ItemStack ArmorItem) {
@@ -163,19 +171,19 @@ public class ArmorReseter implements Listener {
 
         return ResultItem;
     }
-    
+
     private void DamageArmorItem(ItemStack ArmorItem) {
         if (ArmorItem != null && ArmorItem.getItemMeta() instanceof Damageable Damageable) {
             int MaxDurability = ArmorItem.getType().getMaxDurability();
             int CurrentDamage = Damageable.getDamage();
             int RemainingDurability = MaxDurability - CurrentDamage;
-            
+
             if (RemainingDurability > 0) {
                 int DurabilityLossPercent = MinDurabilityLossPercent + Random.nextInt(MaxDurabilityLossPercent - MinDurabilityLossPercent + 1);
                 int DurabilityLoss = (RemainingDurability * DurabilityLossPercent) / 100;
 
                 Damageable.setDamage(CurrentDamage + DurabilityLoss);
-                ArmorItem.setItemMeta((ItemMeta) Damageable);
+                ArmorItem.setItemMeta(Damageable);
             }
         }
     }
